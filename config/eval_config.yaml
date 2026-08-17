@@ -1,0 +1,134 @@
+# The single project declaration file — the only bridge between the generic
+# engine in src/ and YOUR project layer (prompts, suites, rubrics, fixtures).
+# Code reads paths, models, and suite wiring exclusively from here. Env vars
+# (EVAL_MODEL, EVAL_JUDGE_MODEL, ...) are overrides, not the interface, and
+# every override actually used is recorded in the run manifest.
+#
+# This file ships as a template: fill in project.name, add your suites, and
+# follow the README's "Reusing this engine" guide.
+version: 2
+
+project:
+  name: my-project
+  # The model this project actually ships with. `doctor` warns when the
+  # generation model under test differs — evaluate what you deploy.
+  production_model: claude-sonnet-5
+  # Your deterministic contract-checks module (promptfoo python asserts).
+  # The path is fingerprinted into pipeline state. Uncomment and point at
+  # your file; reference its functions from your dataset cases as
+  #   file://<this path>:<function>
+  # asserts_file: project/asserts.py
+
+# Project-layer directories. Defaults in code mirror this layout, so the
+# block is optional — declared here to make the layout self-documenting.
+paths:
+  fixtures_dir: fixtures
+  graded_dir: datasets/graded
+  outputs_dir: outputs
+
+prompts:
+  production_dir: prompts/production
+  candidates_dir: prompts/candidates
+
+suites:
+  # One entry per prompt under test. id is an opaque string; file is a YAML
+  # list of cases; rubric enables the graded tier. Example shape:
+  #
+  #   - id: my-suite
+  #     file: datasets/my-suite.yaml
+  #     rubric: judges/my-suite.md
+  []
+
+agents:
+  generation:
+    # The model under test — keep it equal to project.production_model.
+    # Opus-tier generation was 80% of the original $130 post-mortem spend for
+    # no measurable finding the cheaper tier missed. Override: EVAL_MODEL.
+    model: claude-sonnet-5
+    max_budget_usd: 3 # per case, enforced natively by the claude-agent-sdk provider
+    max_turns: 40 # 20 exhausted mid-read on a document suite → hollow outputs (incident #3)
+    max_tokens_per_turn: 64000 # 16k/32k truncated document writes mid-file ($36.67 waste, incident #5)
+    max_concurrency: 2
+    repeat: 1 # trials per case on live runs; override: EVAL_REPEAT
+  judge:
+    # Must differ from the generation model — self-grading is hard-blocked.
+    # VALID ONLY behind a green calibration record; the state machine blocks
+    # graded runs otherwise. Cross-family judging: set openai:<model> and
+    # install the extra (uv sync --extra cross-judge).
+    model: claude-sonnet-4-6
+    # Deterministic grading: graders run at t=0 (promptfoo/Databricks guidance).
+    # Sent to the API only when set — remove for models that reject an explicit
+    # temperature. Changing it stales calibration (fingerprinted): recalibrate.
+    temperature: 0
+    max_tokens_per_turn: 24000 # >16k: one capped judge reply broke JSON and double-billed a re-ask
+    max_output_tokens_target: 2000 # soft cap requested in the judge prompt
+  dataset:
+    # Test-case generator (gen-cases): simulates ORDINARY users, so cheap is
+    # correct — it writes the prompts that go INTO the system under test, not
+    # the outputs being judged. A strong model here skews the eval: it writes
+    # best-practice "legendary" prompts no real user would type.
+    # No temperature on purpose — case diversity is the point.
+    model: claude-haiku-4-5
+    max_tokens_per_turn: 8000
+
+# USD per MTok. The unknown-model fallback in code is the MOST EXPENSIVE row
+# so a mispriced model can only over-count, never under-count.
+pricing:
+  # Stamp this whenever you re-check provider pricing; `doctor` warns when it
+  # is missing or older than 180 days (stale prices skew every estimate).
+  last_verified: "2026-08-16"
+  claude-fable-5: { input: 10, output: 50, cache_read: 1.0, cache_write: 12.5 } # also the fallback
+  claude-opus-5: { input: 5, output: 25, cache_read: 0.5, cache_write: 6.25 }
+  claude-sonnet-5: { input: 3, output: 15, cache_read: 0.3, cache_write: 3.75 }
+  claude-sonnet-4-6: { input: 3, output: 15, cache_read: 0.3, cache_write: 3.75 }
+  claude-haiku-4-5: { input: 1, output: 5, cache_read: 0.1, cache_write: 1.25 }
+
+governance:
+  max_run_cost_usd: 1.00 # default ceiling; abort without --max-cost/--force (both recorded)
+  # Optional finer ceilings (all enforced pre-run AND by the watchdog):
+  #   max_cost_usd: { generation: 0.75, judge: 0.30, dataset: 0.10 }  # per role
+  #   max_daily_usd: 5.00   # rolling 24h window over outputs/history/spend-ledger.jsonl
+  #   max_weekly_usd: 20.00 # rolling 7d window (rolling, not calendar — timezone-proof)
+  # Per-suite: add max_run_cost_usd on a suite entry to lower its own ceiling.
+  estimate: { gen_usd: 0.20, judge_usd: 0.05 } # fallback ONLY when no measured history exists
+  failure_breaker:
+    consecutive_errors: 4 # abort the run after this many consecutive case errors
+    error_rate: 0.5 # ...or when error rate exceeds this after min_cases
+    min_cases: 5
+    count_truncations: true # truncated outputs count as breaker failures (never auto-retried)
+  redaction:
+    # outputs/history/ is git-tracked; compare records would otherwise embed
+    # full verbatim prompt text. keep | hash | omit — see src/utils/redact.py.
+    history_raw_text: hash
+
+graded:
+  specs_dir: datasets/graded-specs
+  repeat: 3 # k samples per matrix cell — variance is data, not noise
+  adaptive_k: # screen-only: listed suites run k=1; there is NO automatic escalation —
+    # re-run a flagged suite at full k yourself (EVAL_ADAPTIVE_K=0 disables screening)
+    enabled: true
+    screen_suites: [] # suite ids proven ceiling-pinned in archived samples
+  pass_threshold: 3 # pass = every dimension >= this
+  max_cells_per_suite: 8 # full product up to this, pairwise reduction beyond
+  holdout: 0.25 # fraction of cells reserved for post-promotion confirmation only
+  calibration:
+    samples: 3 # k per golden — ALL samples must land in band
+    pass_min: 4 # every pass*.txt >= this on every dimension
+    fail_max: 2 # every fail*.txt <= this on its declared target dimension
+    # min_human_agreement: 0.9 # spot-check rolling floor; round/doctor warn below it
+  promotion: # heuristics, subordinate to the required blinded pairwise verdict
+    target_gain: 0.5 # target dimension mean must improve by >= this (and > trial spread)
+    max_regression: 0.25 # no other dimension may drop by more than this
+    min_pairwise_wins: 2 # both-order cell wins required to promote (current side must win none)
+    min_cells: 3 # fewer compared cells -> INSUFFICIENT_EVIDENCE before any paid pairwise call
+    # max_sign_p: 0.05 # optional: a would-be PROMOTE with sign-test p above this -> INSUFFICIENT_EVIDENCE
+  # Re-evaluation on model/rubric change needs no config: every stage is
+  # fingerprinted (prompt/rubric/matrix SHAs + judge identity), so any change
+  # stales the dependent stages automatically.
+  # monitor:
+  #   cells: 2 # cells the drift canary re-runs (override: EVAL_MONITOR_CELLS)
+
+observability:
+  runs_dir: outputs/runs
+  history_dir: outputs/history
+  heartbeat_seconds: 30

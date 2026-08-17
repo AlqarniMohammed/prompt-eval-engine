@@ -1,0 +1,20 @@
+# The live API key must NEVER enter the build context — a copied .env would
+# bake a credential into an image layer, retrievable forever.
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+
+# Rebuilt inside the image from the lockfiles.
+node_modules/
+.venv/
+
+# Local scratch and caches — not part of a reproducible environment.
+outputs/runs/
+outputs/.promptfoo-cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.bak
+.git/

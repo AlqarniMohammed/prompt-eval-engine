@@ -1,0 +1,28 @@
+# Graded-tier spec for the support-reply example. `prompt-eval matrix`
+# composes the axes into cells (tone x issue = 4 here; graded.holdout
+# reserves a fraction for post-promotion confirmation only).
+suite: support-reply
+base:
+  promptFile: support-reply.md
+  golden: support-reply
+contracts:
+  - { type: python, value: "file://contracts.py:acknowledges_customer" }
+  - { type: python, value: "file://contracts.py:has_next_step" }
+  - { type: python, value: "file://contracts.py:no_internal_leak" }
+  - { type: python, value: "file://contracts.py:no_unfilled_template" }
+axes:
+  tone:
+    - id: polite
+      probe: "hi! order 48213 - the tent arrived with a snapped pole. could you help me sort this out?"
+    - id: angry
+      probe: "order 48213. tent arrived BROKEN. snapped pole. this trip is in 4 days, fix it."
+  issue:
+    - id: late
+      probe: "order 51992 is two weeks late and tracking hasn't moved since the 3rd. where is it?"
+    - id: missing-evidence
+      probe: "my sleeping bag came ripped, i want a refund right now"
+# Calibration: which rubric dimension each golden set's fail*.txt files are
+# REQUIRED to score low on (<= graded.calibration.fail_max, every sample).
+calibration:
+  support-reply:
+    failTarget: resolution

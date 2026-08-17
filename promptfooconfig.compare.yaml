@@ -1,0 +1,26 @@
+# COMPARE-GRADED config — current vs candidate on the SAME matrix cells,
+# same judge, same k. The generator expands every cell x trial x
+# prompt-variant (vars.promptVariant selects which prompt tree builds the
+# text), each with its own workspace. The verdict is computed afterwards by
+# `runner.py verdict` (blinded position-swap pairwise with verdict
+# idempotency) — never by eyeballing two score columns.
+description: Graded A/B — current vs candidate, blinded-pairwise verdict
+
+prompts:
+  - id: file://src/loaders/pf_prompts.py:compare_prompt
+    label: compare
+
+# Native agent-sdk provider; per-test overrides arrive via test `options`
+# (promptfoo ignores test-level `provider:` dicts from Python generators —
+# see pf_tests.py). Sentinel working_dir = fail loudly and free if a test
+# lacks its override.
+providers:
+  - id: anthropic:claude-agent-sdk
+    label: agent-sdk
+    config:
+      working_dir: outputs/__missing-per-test-options__
+
+tests: file://src/loaders/pf_tests.py:generate_compare_graded_tests
+
+extensions:
+  - file://src/hooks.py:extension_hook

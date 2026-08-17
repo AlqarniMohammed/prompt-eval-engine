@@ -1,0 +1,61 @@
+{
+  "suite": "05-evaluate",
+  "samples": 3,
+  "passMin": 4,
+  "failMax": 2,
+  "goldens": {
+    "05-step1/pass.txt": {
+      "set": "pass",
+      "byDim": {
+        "strictness_honesty": [
+          5,
+          5,
+          5
+        ],
+        "evidence_specificity": [
+          5,
+          5,
+          4
+        ],
+        "pedagogical_value": [
+          5,
+          5,
+          4
+        ],
+        "stage_discipline": [
+          5,
+          5,
+          5
+        ]
+      }
+    },
+    "05-step1/fail.txt": {
+      "set": "fail",
+      "byDim": {
+        "strictness_honesty": [
+          1,
+          1,
+          1
+        ],
+        "evidence_specificity": [
+          2,
+          1,
+          1
+        ],
+        "pedagogical_value": [
+          1,
+          1,
+          1
+        ],
+        "stage_discipline": [
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  },
+  "judgeModel": "claude-sonnet-4-6",
+  "rubricSha256": "fb4722fbc14d647795d7d6311f7e14af218aa06c4974c706b3b96d11a335de23",
+  "green": true
+}

@@ -1,0 +1,20 @@
+.env
+.env.*
+!.env.example
+.DS_Store
+/suggestions.md
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.promptfoo-cache/
+
+# Per-run working artifacts (audit records in outputs/history/ ARE tracked)
+outputs/runs/
+outputs/*.json
+outputs/*.jsonl
+outputs/*.log
+outputs/.run.lock
+outputs/.state.json
+.venv/
+*.bak

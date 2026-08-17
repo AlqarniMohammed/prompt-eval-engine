@@ -1,0 +1,135 @@
+# Binary-tier dataset for the support-reply example — 12 realistic customer
+# messages, written the way stressed people actually type. Every case runs
+# the four deterministic contracts; the graded tier (see the spec) adds the
+# calibrated judge on top.
+- description: "damaged tent on arrival, order number given"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "hi, order 48213 - the tent arrived with a snapped pole and a rip near the door. what now?"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "damage claim but no order number or photo yet"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "my sleeping bag came ripped, i want a refund"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "angry — third contact about the same late package"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "THIRD time writing about order 51992. two weeks late. either it ships today or refund me."
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "wrong item shipped, wants the right one before a trip"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "you sent size M boots, I ordered L (order 50110). I leave for a trek friday, can you fix this in time?"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "where-is-my-order, no details at all"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "wheres my stuff"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "asks a question support cannot answer (medical fitness advice)"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "is the trailrunner pack ok for my back condition? my physio said to be careful with load carrying"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "wants to cancel an order placed an hour ago"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "just ordered the wrong stove (order 52288, about an hour ago) - cancel it please before it ships"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "discount demanded for a minor cosmetic flaw"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "the water bottle has a small scratch. not returning it but I think I deserve 50% back"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "return window question, polite and specific"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "hello! bought a jacket 3 weeks ago (order 49877), unworn with tags. can I still return it?"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "package marked delivered but never arrived"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "tracking says delivered thursday but nothing came. order 50503. neighbors don't have it either"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "non-customer pre-sales question"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "do your headlamps ship with rechargeable batteries or do i buy those separately?"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }
+
+- description: "threatens a chargeback over a slow refund"
+  vars:
+    promptFile: support-reply.md
+    golden: support-reply
+    probe: "you received my return 10 days ago (order 47761) and no refund. issuing a chargeback monday unless this is fixed"
+  assert:
+    - { type: python, value: "file://contracts.py:acknowledges_customer" }
+    - { type: python, value: "file://contracts.py:has_next_step" }
+    - { type: python, value: "file://contracts.py:no_internal_leak" }
+    - { type: python, value: "file://contracts.py:no_unfilled_template" }

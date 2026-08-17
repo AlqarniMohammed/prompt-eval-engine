@@ -1,0 +1,58 @@
+# CI for a zero-spend test suite: every model client is mocked in tests, and the
+# API keys are explicitly blanked below so a live call is structurally impossible.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.13"]
+    env:
+      # Belt and braces: no key can exist in CI, so nothing can spend.
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      # Exact promptfoo pin; pytest needs it (validate shells out to the binary).
+      - run: npm ci
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv sync --extra cross-judge
+      - run: uv run pytest -q
+      # Bare repo: declaration checks only, exits 0 before touching promptfoo.
+      - run: uv run prompt-eval validate
+
+  # The shipped example, adopted and proven end to end for $0 on every commit:
+  # init --example → full offline validate (goldens vs contracts through real
+  # promptfoo) → band-mock calibration (proves wiring and band arithmetic,
+  # never judge quality). Mutates only the ephemeral CI checkout.
+  example-smoke:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+      - run: uv sync
+      - run: uv run prompt-eval init --example support-reply
+      - run: uv run prompt-eval validate
+      - run: MOCK_GRADED_JUDGE=band uv run prompt-eval calibrate --suite support-reply

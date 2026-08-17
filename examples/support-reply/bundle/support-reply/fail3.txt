@@ -1,0 +1,7 @@
+===== STDOUT =====
+Delivery times vary depending on carrier volume, weather, and warehouse
+throughput. Most packages arrive eventually. Damage sometimes occurs in
+transit, which is outside our control once the package leaves our facility.
+Refund eligibility depends on several factors outlined on our website.
+
+— Northwind Gear Support

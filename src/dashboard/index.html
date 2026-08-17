@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>prompt-eval dashboard</title>
+<style>
+/* ---- tokens (dataviz reference palette; dark = selected steps, not a flip) */
+:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4;
+  --seq:#256abf; --seq-track:#cde2fb;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --good-text:#006300;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181;
+    --seq:#3987e5; --seq-track:#184f95;
+    --good-text:#0ca30c;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);
+  font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding:20px}
+h1{font-size:18px;margin:0 0 2px}
+h2{font-size:14px;margin:0 0 10px;color:var(--ink)}
+.sub{color:var(--ink-2);font-size:12.5px;margin-bottom:18px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;min-width:0}
+.card.wide{grid-column:1/-1}
+.empty{color:var(--muted);font-size:13px;padding:8px 0}
+.err{color:var(--critical);font-size:12.5px}
+/* stat tiles */
+.tiles{display:flex;flex-wrap:wrap;gap:18px 28px;margin-bottom:8px}
+.tile .lbl{font-size:12px;color:var(--ink-2)}
+.tile .val{font-size:26px;font-weight:600}
+.tile .note{font-size:11.5px;color:var(--muted)}
+/* meter */
+.meter{height:10px;border-radius:5px;background:var(--seq-track);overflow:hidden;margin:6px 0 2px}
+.meter>i{display:block;height:100%;border-radius:5px;background:var(--seq)}
+/* badges: icon + label, never color alone */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-2)}
+.badge .dot{width:9px;height:9px;border-radius:50%;flex:none}
+/* pipeline chips */
+.stages{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 2px}
+.chip{border:1px solid var(--axis);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--muted)}
+.chip.done{background:var(--seq);border-color:var(--seq);color:#fff}
+.chip.stale{background:none;border-color:var(--warning);color:var(--ink-2)}
+.suite-row{padding:9px 0;border-top:1px solid var(--grid)}
+.suite-row:first-of-type{border-top:none}
+.suite-name{font-weight:600}
+.next{font-size:12px;color:var(--ink-2)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;
+  background:var(--page);border:1px solid var(--grid);border-radius:4px;padding:0 4px}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{color:var(--muted);font-weight:500;text-align:left;padding:4px 10px 4px 0;
+  border-bottom:1px solid var(--grid);white-space:nowrap}
+td{padding:5px 10px 5px 0;border-bottom:1px solid var(--grid);vertical-align:top}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+/* charts */
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink-2);margin:2px 0 6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+svg text{font:11px system-ui,sans-serif;fill:var(--muted)}
+svg .end-label{fill:var(--ink-2);font-size:11px}
+#tooltip{position:fixed;pointer-events:none;background:var(--surface);color:var(--ink);
+  border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.15);display:none;z-index:9;max-width:320px}
+.events{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--ink-2);
+  max-height:180px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+details{margin:6px 0}
+summary{cursor:pointer;font-weight:600;font-size:13px}
+.doc{font-size:12.5px;color:var(--ink-2);margin:6px 0 10px;padding-left:12px;border-left:2px solid var(--grid)}
+.doc b{color:var(--ink)}
+.fixes li{margin-bottom:6px;font-size:12.5px}
+.stalebadge{color:var(--ink-2);font-size:12px}
+</style>
+</head>
+<body>
+<h1>prompt-eval dashboard</h1>
+<div class="sub" id="meta-line">connecting…</div>
+
+<div class="grid">
+  <div class="card wide" id="live-card"><h2>Live</h2><div id="live" class="empty">loading…</div></div>
+  <div class="card wide" id="pipeline-card"><h2>Pipeline</h2><div id="pipeline" class="empty">loading…</div></div>
+  <div class="card wide"><h2>History — dimension means per suite (graded runs)</h2><div id="history" class="empty">loading…</div></div>
+  <div class="card"><h2>Spend</h2><div id="spend" class="empty">loading…</div></div>
+  <div class="card"><h2>Verdicts</h2><div id="verdicts" class="empty">loading…</div></div>
+  <div class="card wide"><h2>Judge evidence</h2><div id="evidence" class="empty">loading…</div></div>
+  <div class="card wide"><h2>Runs</h2><div id="runs" class="empty">loading…</div></div>
+</div>
+<div id="tooltip"></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const usd = v => v == null ? "—" : "$" + Number(v).toFixed(2);
+const pct = v => v == null ? "—" : Math.round(v * 100) + "%";
+const secs = v => v == null ? "—" : v < 90 ? Math.round(v) + "s" : Math.round(v / 60) + "m";
+const when = iso => iso ? iso.replace("T", " ").slice(0, 16) : "—";
+const SERIES = ["--s1","--s2","--s3","--s4","--s5"];
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+async function j(path){
+  const r = await fetch(path); if(!r.ok) throw new Error(path + " → " + r.status);
+  return r.json();
+}
+function fail(id, e){ $(id).innerHTML = '<div class="err">' + esc(e.message || e) + "</div>"; }
+
+/* ---------- tooltip layer ---------- */
+const tip = $("tooltip");
+function bindTips(root){
+  root.querySelectorAll("[data-tip]").forEach(el => {
+    el.addEventListener("mousemove", ev => {
+      tip.innerHTML = el.dataset.tip; tip.style.display = "block";
+      const x = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8);
+      tip.style.left = x + "px"; tip.style.top = (ev.clientY + 14) + "px";
+    });
+    el.addEventListener("mouseleave", () => tip.style.display = "none");
+  });
+}
+
+/* ---------- badges (icon + label, never color alone) ---------- */
+const badge = (color, icon, label) =>
+  `<span class="badge"><span class="dot" style="background:var(${color})"></span>${icon} ${esc(label)}</span>`;
+
+/* ---------- Live ---------- */
+async function renderLive(){
+  try{
+    const d = await j("/api/live");
+    if(!d.active){ $("live").innerHTML = '<div class="empty">No run in flight. ' +
+      'Start one in another terminal — this panel picks it up within a few seconds.</div>'; return; }
+    const frac = d.ceilingUsd ? Math.min(1, (d.spendUsd || 0) / d.ceilingUsd) : 0;
+    const meterColor = frac >= 0.9 ? "--critical" : frac >= 0.7 ? "--warning" : "--seq";
+    let html = '<div class="tiles">';
+    html += `<div class="tile"><div class="lbl">run</div><div class="val" style="font-size:17px">${esc(d.runId)}</div>
+      <div class="note">${esc(d.mode || "")}${d.suite ? " · " + esc(d.suite) : ""} · via ${esc(d.source)}</div></div>`;
+    html += `<div class="tile"><div class="lbl">progress</div><div class="val">${d.done}${d.planned ? " / " + d.planned : ""}</div>
+      <div class="note">${d.failures ? d.failures + " infra failure(s) · " : ""}ETA ${secs(d.etaSeconds)}</div></div>`;
+    html += `<div class="tile" style="min-width:210px"><div class="lbl">measured spend vs ceiling${d.ceilingOverridden ? " (raised)" : ""}</div>
+      <div class="val">${usd(d.spendUsd)} <span style="font-size:14px;color:var(--muted)">/ ${usd(d.ceilingUsd)}</span></div>
+      <div class="meter"><i style="width:${Math.round(frac*100)}%;background:var(${meterColor})"></i></div>
+      <div class="note">${d.calls} calls${d.capHits ? " · ⚠ " + d.capHits + " exact-cap hit(s)" : ""}</div></div>`;
+    html += `<div class="tile"><div class="lbl">health</div><div class="val" style="font-size:16px">`
+      + (d.stalled ? badge("--warning","⚠","stalled — no activity for 2× heartbeat")
+                   : badge("--good","●","active")) + `</div></div>`;
+    html += "</div>";
+    if(d.alerts && d.alerts.length)
+      html += d.alerts.map(a => `<div class="err">⚠ ${esc(a)}</div>`).join("");
+    if(d.events && d.events.length)
+      html += '<div class="events">' + d.events.map(e =>
+        `${esc((e.ts||"").slice(11,19))}  ${esc(e.ev)}${e.case ? "  " + esc(e.case) : ""}${e.note ? "  — " + esc(e.note) : ""}`
+      ).join("\n") + "</div>";
+    $("live").innerHTML = html;
+  }catch(e){ fail("live", e); }
+}
+
+/* ---------- Pipeline ---------- */
+async function renderPipeline(){
+  try{
+    const d = await j("/api/state");
+    if(!d.suites.length){ $("pipeline").innerHTML =
+      '<div class="empty">No suites declared — drop a prompt into <code>input/</code> and run <code>prompt-eval init</code>.</div>'; return; }
+    let html = "";
+    const pf = d.preflight;
+    html += `<div style="margin-bottom:8px">${pf.recorded && !pf.problems.length
+      ? badge("--good","✓","preflight green (" + when(pf.at) + ")")
+      : badge("--warning","⚠", pf.recorded ? "preflight stale — " + esc(pf.problems[0] || "") : "preflight not run")}</div>`;
+    for(const s of d.suites){
+      html += `<div class="suite-row"><span class="suite-name">${esc(s.suite)}</span>`;
+      if(s.placeholders.length)
+        html += ` <span class="stalebadge">· scaffolded — placeholders in ${s.placeholders.length} file(s)</span>`;
+      html += '<div class="stages">';
+      for(const st of s.stages){
+        const doc = d.stageDocs[st.stage] || {};
+        const cls = st.done ? (st.stale.length ? "chip stale" : "chip done") : "chip";
+        const mark = st.done ? (st.stale.length ? "⚠ " : "✓ ") : "";
+        const tipHtml = `<b>${esc(doc.title || st.stage)}</b> · <code>prompt-eval ${esc(doc.command || "")}</code> · ${esc(doc.cost || "")}` +
+          `<br>${esc(doc.what || "")}<br><b>Proves:</b> ${esc(doc.proves || "")}` +
+          (st.at ? `<br><b>Earned:</b> ${esc(when(st.at))}` : "") +
+          (st.stale.length ? `<br><b>⚠ STALE on:</b> ${esc(st.stale.join(", "))}` : "") +
+          (st.verdict ? `<br><b>Verdict:</b> ${esc(st.verdict)}` : "") +
+          (st.green === false ? "<br><b>⚠ last calibration NOT green</b>" : "") +
+          (st.restored ? "<br>(restored by graft)" : "");
+        html += `<span class="${cls}" data-tip="${esc(tipHtml)}">${mark}${esc(st.stage)}</span>`;
+        html += '<span style="color:var(--axis)">→</span>';
+      }
+      html = html.slice(0, -"<span style=\"color:var(--axis)\">→</span>".length);
+      html += "</div>";
+      if(s.next){
+        const doc = d.stageDocs[s.next] || {};
+        html += `<div class="next">next: <code>prompt-eval ${esc(doc.command || s.next)}${doc.command === "validate" ? "" : " --suite " + esc(s.suite)}</code>` +
+          (s.smoked ? "" : " (smoke subset first)") + "</div>";
+      }
+      html += "</div>";
+    }
+    html += '<details><summary>What each stage proves (the pipeline, explained)</summary>';
+    for(const key of d.stageOrder){
+      const doc = d.stageDocs[key]; if(!doc) continue;
+      html += `<div class="doc"><b>${esc(doc.title)}</b> — <code>prompt-eval ${esc(doc.command)}</code> · ${esc(doc.cost)}<br>` +
+        `${esc(doc.what)}<br><b>Proves:</b> ${esc(doc.proves)}<br><b>Why it matters:</b> ${esc(doc.benefit)}</div>`;
+    }
+    html += "</details>";
+    $("pipeline").innerHTML = html;
+    bindTips($("pipeline"));
+  }catch(e){ fail("pipeline", e); }
+}
+
+/* ---------- History (line chart per suite: dimension means, 1–5) ---------- */
+function lineChart(points, dims){
+  const W = 560, H = 170, L = 26, R = 96, T = 10, B = 22;
+  const iw = W - L - R, ih = H - T - B;
+  const n = points.length;
+  const x = i => L + (n === 1 ? iw / 2 : i * iw / (n - 1));
+  const y = v => T + (5 - v) / 4 * ih;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">`;
+  for(let g = 1; g <= 5; g++)
+    svg += `<line x1="${L}" y1="${y(g)}" x2="${W-R}" y2="${y(g)}" stroke="var(--grid)" stroke-width="1"/>` +
+           `<text x="${L-6}" y="${y(g)+3}" text-anchor="end">${g}</text>`;
+  const surface = "var(--surface)";
+  const endLabels = [];
+  dims.forEach((dim, di) => {
+    const color = `var(${SERIES[di % SERIES.length]})`;
+    const coords = points.map((p, i) => p.dims[dim] == null ? null : [x(i), y(p.dims[dim]), i]).filter(Boolean);
+    if(!coords.length) return;
+    svg += `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${coords.map(c => c[0]+","+c[1]).join(" ")}"/>`;
+    for(const [cx, cy, i] of coords){
+      const p = points[i];
+      const tipHtml = `<b>${esc(p.runId || p.file)}</b><br>${esc(when(p.at))} · ${esc(p.mode)} · n=${p.n}` +
+        (p.successRate != null ? ` · pass ${pct(p.successRate)}` : "") + "<br>" +
+        dims.map((d2, k) => `<i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(${SERIES[k % SERIES.length]});margin-right:4px"></i>${esc(d2)} ${p.dims[d2] == null ? "—" : p.dims[d2].toFixed(2)}`).join("<br>");
+      svg += `<circle cx="${cx}" cy="${cy}" r="4" fill="${color}" stroke="${surface}" stroke-width="2" data-tip="${esc(tipHtml)}"/>`;
+    }
+    const last = coords[coords.length - 1];
+    endLabels.push({y: last[1], text: dim, color});
+  });
+  endLabels.sort((a, b) => a.y - b.y);
+  let prev = -99;
+  for(const el of endLabels){
+    if(el.y - prev >= 12){ // selective: skip colliding end labels; legend + tooltip carry them
+      svg += `<text class="end-label" x="${W-R+8}" y="${el.y+3}">${esc(el.text)}</text>`;
+      prev = el.y;
+    }
+  }
+  const first = points[0], last = points[n-1];
+  svg += `<text x="${L}" y="${H-6}">${esc(when(first.at).slice(0,10))}</text>`;
+  if(n > 1) svg += `<text x="${W-R}" y="${H-6}" text-anchor="end">${esc(when(last.at).slice(0,10))}</text>`;
+  svg += "</svg>";
+  return svg;
+}
+
+async function renderHistory(){
+  try{
+    const d = await j("/api/history");
+    const suites = Object.keys(d.series);
+    if(!suites.length){ $("history").innerHTML =
+      '<div class="empty">No archived graded runs yet — the first <code>prompt-eval graded</code> baseline starts the trend lines.</div>'; }
+    else{
+      let html = "";
+      for(const sid of suites){
+        const points = d.series[sid];
+        const dims = [...new Set(points.flatMap(p => Object.keys(p.dims)))].slice(0, 5);
+        html += `<details open><summary>${esc(sid)} <span style="color:var(--muted);font-weight:400">(${points.length} run(s))</span></summary>`;
+        if(dims.length)
+          html += '<div class="legend">' + dims.map((dim, i) =>
+            `<span><i style="background:var(${SERIES[i % SERIES.length]})"></i>${esc(dim)}</span>`).join("") + "</div>"
+            + lineChart(points, dims);
+        else html += '<div class="empty">no judge scores in these runs</div>';
+        html += "</details>";
+      }
+      if(d.calibrations.length){
+        html += '<details><summary>Calibrations</summary><div class="scroll"><table><tr><th>when</th><th>suite</th><th>judge</th><th>goldens</th><th>result</th></tr>';
+        for(const c of d.calibrations.slice().reverse().slice(0, 15))
+          html += `<tr><td>${esc(c.at || "—")}</td><td>${esc(c.suite)}</td><td>${esc(c.judgeModel || "?")}</td>` +
+            `<td class="num">${c.goldens}</td><td>${c.green ? badge("--good","✓","green") : badge("--critical","✗","band miss")}</td></tr>`;
+        html += "</table></div></details>";
+      }
+      $("history").innerHTML = html || '<div class="empty">nothing yet</div>';
+      bindTips($("history"));
+    }
+  }catch(e){ fail("history", e); }
+}
+
+/* ---------- Spend ---------- */
+async function renderSpend(){
+  try{
+    const d = await j("/api/history");
+    const m = d.measured || {total:{usd:0,calls:0}, byKind:{}, alerts:0};
+    let html = '<div class="tiles">' +
+      `<div class="tile"><div class="lbl">measured, all runs on disk</div><div class="val">${usd(m.total.usd)}</div>` +
+      `<div class="note">${m.total.calls} calls${m.alerts ? " · ⚠ " + m.alerts + " alert(s)" : ""}</div></div>`;
+    for(const [kind, s] of Object.entries(m.byKind))
+      html += `<div class="tile"><div class="lbl">${esc(kind)}</div><div class="val" style="font-size:18px">${usd(s.usd)}</div><div class="note">${s.calls} calls</div></div>`;
+    html += "</div>";
+    const modes = Object.entries(d.spendByMode || {}).sort((a,b) => b[1].usd - a[1].usd);
+    if(modes.length){
+      const max = modes[0][1].usd;
+      html += '<table>';
+      for(const [mode, s] of modes){
+        const w = max ? Math.max(2, Math.round(s.usd / max * 100)) : 0;
+        html += `<tr><td style="width:86px">${esc(mode)}</td>` +
+          `<td><div style="height:14px;max-width:${w}%;background:var(--seq);border-radius:0 4px 4px 0" data-tip="${esc(mode)}: ${usd(s.usd)} over ${s.runs} archived run(s)"></div></td>` +
+          `<td class="num" style="white-space:nowrap">${usd(s.usd)}</td></tr>`;
+      }
+      html += "</table><div class='note' style='color:var(--muted);font-size:11.5px'>archived history by mode</div>";
+    }
+    $("spend").innerHTML = html;
+    bindTips($("spend"));
+  }catch(e){ fail("spend", e); }
+}
+
+/* ---------- Verdicts ---------- */
+async function renderVerdicts(){
+  try{
+    const d = await j("/api/verdicts");
+    if(!d.verdicts.length){ $("verdicts").innerHTML =
+      '<div class="empty">No verdicts yet — they appear after the first <code>compare</code> + <code>verdict</code>.</div>'; return; }
+    let html = '<div class="scroll"><table><tr><th>when</th><th>suite</th><th>target</th><th>pairwise</th><th>verdict</th></tr>';
+    for(const v of d.verdicts.slice(0, 20)){
+      const pw = v.pairwise ? `${v.pairwise.winsCandidate}–${v.pairwise.winsCurrent}–${v.pairwise.ties} (W–L–T)` : "—";
+      html += `<tr><td>${esc(when(v.at))}</td><td>${esc(v.suite)}</td><td>${esc(v.target || "—")}</td><td>${esc(pw)}</td>` +
+        `<td>${v.promote ? badge("--good","✓","PROMOTE") : badge("--critical","✗","REJECT")}` +
+        (v.blocked ? " " + badge("--warning","⚠","blocked re-roll") : "") +
+        (v.reason ? `<div class="note" style="color:var(--muted)">reason: ${esc(v.reason)}</div>` : "") + "</td></tr>";
+    }
+    $("verdicts").innerHTML = html + "</table></div>";
+  }catch(e){ fail("verdicts", e); }
+}
+
+/* ---------- Evidence ---------- */
+function histogram(dim, buckets){
+  const W = 150, H = 76, B = 16, bw = 20, gap = 6;
+  const max = Math.max(1, ...Object.values(buckets));
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}">`;
+  for(let s = 1; s <= 5; s++){
+    const v = buckets[s] || 0;
+    const h = Math.round(v / max * (H - B - 14));
+    const bx = 10 + (s - 1) * (bw + gap), by = H - B - h;
+    svg += `<rect x="${bx}" y="${by}" width="${bw}" height="${Math.max(h,1)}" rx="3" fill="var(--seq)" data-tip="${esc(dim)} — score ${s}: ${v} judgment(s)"/>`;
+    if(v) svg += `<text x="${bx + bw/2}" y="${by - 3}" text-anchor="middle">${v}</text>`;
+    svg += `<text x="${bx + bw/2}" y="${H-4}" text-anchor="middle">${s}</text>`;
+  }
+  return svg + "</svg>";
+}
+
+async function renderEvidence(){
+  try{
+    const d = await j("/api/evidence");
+    if(!d.scored && !d.errorCount){ $("evidence").innerHTML =
+      '<div class="empty">No judge evidence yet — graded runs append every judgment (scores, quoted evidence, suggested fixes) to a sidecar this panel reads.</div>'; return; }
+    let html = `<div class="sub">${d.scored} scored judgment(s)` +
+      (d.errorCount ? ` · <span class="err">⚠ ${d.errorCount} judge error(s) — recorded as no-measurement, never fabricated scores</span>` : "") + "</div>";
+    const dims = Object.keys(d.histograms);
+    if(dims.length){
+      html += '<div style="display:flex;flex-wrap:wrap;gap:8px 22px">';
+      for(const dim of dims)
+        html += `<div><div style="font-size:12px;color:var(--ink-2)">${esc(dim)}</div>${histogram(dim, d.histograms[dim])}</div>`;
+      html += "</div>";
+    }
+    if(d.worst.length){
+      html += '<details open><summary>Worst-scored cells (judge’s own words)</summary><div class="scroll"><table><tr><th>suite · cell</th><th class="num">mean</th><th>top issue</th></tr>';
+      for(const w of d.worst)
+        html += `<tr><td>${esc(w.suite)} · ${esc(w.cell)}</td><td class="num">${w.mean.toFixed(2)}</td><td>${esc(w.topIssue || "—")}</td></tr>`;
+      html += "</table></div></details>";
+    }
+    if(d.suggestedFixes.length){
+      html += '<details><summary>Suggested prompt fixes (deduped across judgments)</summary><ul class="fixes">';
+      for(const f of d.suggestedFixes)
+        html += `<li><b>×${f.count}</b> ${esc(f.fix)} <span style="color:var(--muted)">(${esc(f.suites.join(", "))})</span></li>`;
+      html += "</ul></details>";
+    }
+    if(d.errors.length){
+      html += '<details><summary>Judge errors</summary><div class="events">' +
+        d.errors.map(e => `${esc((e.ts||"").slice(0,19))}  ${esc(e.suite)} · ${esc(e.cell)} — ${esc(e.error)}`).join("\n") + "</div></details>";
+    }
+    $("evidence").innerHTML = html;
+    bindTips($("evidence"));
+  }catch(e){ fail("evidence", e); }
+}
+
+/* ---------- Runs ---------- */
+async function renderRuns(){
+  try{
+    const d = await j("/api/runs");
+    if(!d.runs.length){ $("runs").innerHTML = '<div class="empty">No runs yet.</div>'; return; }
+    let html = '<div class="scroll"><table><tr><th>run</th><th>suite</th><th class="num">cases</th><th class="num">spend</th><th>status</th></tr>';
+    for(const r of d.runs.slice(0, 30)){
+      const status = r.status === "failed" ? badge("--critical","✗","failed") :
+        r.status === "finished" ? badge("--good","✓","finished") :
+        r.status === "offline" ? badge("--good","○","offline") : badge("--warning","●","in-flight");
+      html += `<tr><td><b>${esc(r.runId)}</b>${r.forcedGates ? ' <span class="stalebadge">⚠ forced×' + r.forcedGates + "</span>" : ""}</td>` +
+        `<td>${esc(r.suite || "all")}</td><td class="num">${r.cases ?? "—"}</td>` +
+        `<td class="num">${usd(r.spendUsd)}</td><td>${status}` +
+        (r.killedReason ? `<div class="err">${esc(r.killedReason)}</div>` : "") + "</td></tr>";
+    }
+    $("runs").innerHTML = html + "</table></div>";
+  }catch(e){ fail("runs", e); }
+}
+
+/* ---------- meta + polling ---------- */
+async function renderMeta(){
+  try{
+    const m = await j("/api/meta");
+    $("meta-line").textContent =
+      `${m.project} · engine ${m.engineVersion} · generation ${m.models.generation} · judge ${m.models.judge}` +
+      ` · ceiling ${usd(m.governance.maxRunCostUsd)}/run · read-only, localhost-only — per-case outputs live in promptfoo view`;
+  }catch(e){ $("meta-line").textContent = "cannot reach the engine: " + (e.message || e); }
+}
+function slowTick(){ renderPipeline(); renderHistory(); renderSpend(); renderVerdicts(); renderEvidence(); renderRuns(); }
+renderMeta(); renderLive(); slowTick();
+setInterval(renderLive, 3000);
+setInterval(slowTick, 15000);
+</script>
+</body>
+</html>

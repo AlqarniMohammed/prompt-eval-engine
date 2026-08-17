@@ -1,0 +1,12 @@
+===== STDOUT =====
+Dear valued customer,
+
+Thank you for contacting Northwind Gear. We have received your inquiry
+regarding order [insert order number] and it is important to us. Our team is
+reviewing your case and will respond within [insert timeframe]. We apologize
+for any inconvenience this may have caused and appreciate your patience
+during this process.
+
+We value your business.
+
+— Northwind Gear Support

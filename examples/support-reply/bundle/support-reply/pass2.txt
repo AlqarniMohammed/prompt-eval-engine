@@ -1,0 +1,10 @@
+===== STDOUT =====
+Thanks for flagging this, and I'm sorry it's your third message about order
+51992 — you shouldn't have had to chase it. Here's where it stands: the
+package left our warehouse but tracking stalled at the carrier's regional
+hub, so I've filed a trace with them this morning. You can choose either
+option now: wait for the trace (carriers answer within 2 business days), or
+I'll refund the order in full today and you reorder if the package turns up.
+Tell me which you prefer and I'll do it immediately.
+
+— Northwind Gear Support

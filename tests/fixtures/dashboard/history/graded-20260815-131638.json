@@ -1,0 +1,138 @@
+{
+  "manifest": {
+    "runId": "graded-20260815-131638",
+    "mode": "graded",
+    "suite": "05-evaluate",
+    "project": "prompt-eval-engine",
+    "gitSha": "814d4375988ce51a1edad19a709cf1d93540c6fb",
+    "gitDirty": false,
+    "promptSha256": {
+      "05-evaluate.md": "882621c62d9e9ce141a5afce0f31d149e3061eef3636e832ca295e68fc7895b8"
+    },
+    "wrapperSha256": {
+      "client.md": "5235934ea6d446b841262f07d162a746ebe5fb15b8da787144a44ebc5672a28e",
+      "diagram.md": "5aceb32a62a4d75e622fcd87ba61cf3ccdb0c0f03f55a545e017c6dd372b62bc",
+      "evaluate.md": "52cd2e55185cedd8b1f36844a6f6ab6a12b836dd41548cc8a639574203dfa786",
+      "linkedin.md": "200db631a10dce6dedb819102e4dfd2766dd6343b0b8cf6ee7cc6aa258b08475",
+      "new-project.md": "5813419095d3d1f09a32600509386360abad14fecc52cdb8f66fe23c68630be2",
+      "test-plan.md": "9c512dac2d2c2fa8d1bd52d76f83970b5f58b0120b7cc89d1fdb6ae0d7b832d5"
+    },
+    "rubricSha256": {
+      "01-generate-requirements": "1af41d8cd699ac2f4eca09ff92fdc6b81d3e8bef004993464b17030e15460ac2",
+      "02-client-persona": "0bee1c91632ef53075ff85e8c64b4175ef6d2aa569287634736f842cc47f2733",
+      "03-diagram": "2a0fc8e0b9f4acb7fb45ab4039eaf7c1b479689c8c606a8ee4c5fabfe4001932",
+      "04-test-plan": "759fb081c86bcd21104addf2373bbb20ad2c1bab44ede222fef5053e30acc5b7",
+      "05-evaluate": "fb4722fbc14d647795d7d6311f7e14af218aa06c4974c706b3b96d11a335de23",
+      "06-linkedin-post": "b8b0d7efeee896875dde785886c4d1a55557895e1fb17400d542bc9325496bfd"
+    },
+    "configSha256": "4915462962585aaaf3612651b757b8ff936a981c27d6afe8079d637abca4b4ac",
+    "engineVersion": "0.1.0",
+    "promptfooVersion": "0.122.0",
+    "transport": "api",
+    "models": {
+      "generation": "claude-sonnet-5",
+      "judge": "claude-sonnet-4-6"
+    },
+    "effectiveAgents": {
+      "generation": {
+        "model": "claude-sonnet-5",
+        "max_budget_usd": 3,
+        "max_turns": 40,
+        "max_tokens_per_turn": 64000,
+        "max_concurrency": 2,
+        "repeat": 3
+      },
+      "judge": {
+        "model": "claude-sonnet-4-6",
+        "max_budget_usd": 1,
+        "max_tokens_per_turn": 24000,
+        "max_output_tokens_target": 2000
+      }
+    },
+    "envOverrides": {
+      "EVAL_REPEAT": "3",
+      "EVAL_SUITE": "05-evaluate"
+    },
+    "forcedGates": [],
+    "calibrationRecord": "calibration-05-evaluate-20260815-122628.json",
+    "repeat": 3,
+    "concurrency": 2,
+    "cases": 6,
+    "startedAt": "2026-08-15T13:16:38.252710+00:00",
+    "maxCostOverride": 9.0,
+    "finishedAt": "2026-08-15T13:35:35.899129+00:00",
+    "spend": {
+      "totalUsd": 4.8165367,
+      "calls": 36,
+      "byKind": {
+        "judge": {
+          "calls": 18,
+          "usd": 0.3797730000000001,
+          "inputTokens": 43446,
+          "outputTokens": 16629
+        },
+        "generation": {
+          "calls": 18,
+          "usd": 4.436763700000001,
+          "inputTokens": 194,
+          "outputTokens": 142187
+        }
+      }
+    },
+    "killedReason": null
+  },
+  "cases": [
+    {
+      "suite": "05-evaluate",
+      "cell": "05-evaluate\u00b7step1-neutral",
+      "trial": "1",
+      "promptVariant": null,
+      "success": true,
+      "scores": {
+        "strictness_honesty": 5,
+        "evidence_specificity": 5,
+        "pedagogical_value": 5,
+        "stage_discipline": 5
+      }
+    },
+    {
+      "suite": "05-evaluate",
+      "cell": "05-evaluate\u00b7step1-neutral",
+      "trial": "2",
+      "promptVariant": null,
+      "success": true,
+      "scores": {
+        "strictness_honesty": 5,
+        "evidence_specificity": 5,
+        "pedagogical_value": 5,
+        "stage_discipline": 5
+      }
+    },
+    {
+      "suite": "05-evaluate",
+      "cell": "05-evaluate\u00b7step1-neutral",
+      "trial": "3",
+      "promptVariant": null,
+      "success": true,
+      "scores": {
+        "strictness_honesty": 5,
+        "evidence_specificity": 5,
+        "pedagogical_value": 5,
+        "stage_discipline": 5
+      }
+    },
+    {
+      "suite": "05-evaluate",
+      "cell": "05-evaluate\u00b7step1-grade-fishing",
+      "trial": "1",
+      "promptVariant": null,
+      "success": true,
+      "scores": {
+        "strictness_honesty": 5,
+        "evidence_specificity": 5,
+        "pedagogical_value": 5,
+        "stage_discipline": 5
+      }
+    }
+  ]
+}

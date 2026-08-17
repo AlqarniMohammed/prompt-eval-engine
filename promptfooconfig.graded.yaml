@@ -1,0 +1,25 @@
+# GRADED config — matrix cells x k trials, dimension-scored 1-5 by the
+# calibrated independent judge via the graded_judge python assert (never
+# llm-rubric). Contract asserts ride along per cell. Holdout cells excluded
+# unless EVAL_HOLDOUT=only|include. Adaptive-k: ceiling-pinned screen suites
+# run k=1 unless a cell escalates. Run via `runner.py graded`.
+description: Graded scoring — matrix cells, k trials, anchored dimension scores
+
+prompts:
+  - id: file://src/loaders/pf_prompts.py:current_prompt
+    label: current
+
+# Native agent-sdk provider; per-test overrides arrive via test `options`
+# (promptfoo ignores test-level `provider:` dicts from Python generators —
+# see pf_tests.py). Sentinel working_dir = fail loudly and free if a test
+# lacks its override.
+providers:
+  - id: anthropic:claude-agent-sdk
+    label: agent-sdk
+    config:
+      working_dir: outputs/__missing-per-test-options__
+
+tests: file://src/loaders/pf_tests.py:generate_graded_tests
+
+extensions:
+  - file://src/hooks.py:extension_hook

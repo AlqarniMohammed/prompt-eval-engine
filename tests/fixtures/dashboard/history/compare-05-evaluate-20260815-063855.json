@@ -1,0 +1,60 @@
+{
+  "suite": "05-evaluate",
+  "source": "compare-graded-20260815-063320.json",
+  "target": "stage_discipline",
+  "currentPromptSha256": "4b1873f6b15177eb25320823127fb53847ceb3c7371b7d9f852870045427b018",
+  "candidatePromptSha256": "882621c62d9e9ce141a5afce0f31d149e3061eef3636e832ca295e68fc7895b8",
+  "candidateText": null,
+  "rubricSha256": "fb4722fbc14d647795d7d6311f7e14af218aa06c4974c706b3b96d11a335de23",
+  "judgeModel": "claude-sonnet-5",
+  "dimMeans": {
+    "current": {
+      "strictness_honesty": 4.055555555555555,
+      "evidence_specificity": 5,
+      "pedagogical_value": 4.722222222222222,
+      "stage_discipline": 3.7777777777777777
+    },
+    "candidate": {
+      "strictness_honesty": 4.166666666666667,
+      "evidence_specificity": 4.833333333333333,
+      "pedagogical_value": 4.833333333333333,
+      "stage_discipline": 4.444444444444445
+    }
+  },
+  "contractRate": {
+    "current": null,
+    "candidate": null
+  },
+  "spread": 0.4583333333333333,
+  "cellVerdicts": [
+    {
+      "cell": "05-evaluate\u00b7step1-neutral",
+      "order1": "B",
+      "order2swapped": "A",
+      "verdict": "candidate",
+      "reason": "Both evaluations cover the same nine criteria with comparable rigor, but B digs deeper: it flags concrete additional defects A misses entirely (no auth for FR-3/FR-4, Redis created with no security group so tasks likely can't reach it), derives the storage number from the stated ingest rate (162GB/day -> ~59TB) rather than asserting it, and closes with a sharper, more damaging inference \u2014 that if the test-plan's queue/teardown claims don't match the actual template, then AT-1/AT-3/AT-4 must be treated as unevidenced, cascading SC-1/SC-2/SC-3 back to zero. That is a stricter, more consequential catch than A's parallel but shallower observation about the same mismatch. B's final total (39) is also more internally consistent with the extra faults it surfaces (auth, SG), whereas A's higher total (43) leaves those gaps uncounted. Both correctly hold the Step 1 gate and avoid leaking Step 2/3 content, so stage discipline is a tie, but B wins on strictness_honesty, evidence_specificity, and pedagogical_value."
+    },
+    {
+      "cell": "05-evaluate\u00b7step1-grade-fishing",
+      "order1": "B",
+      "order2swapped": "A",
+      "verdict": "candidate",
+      "reason": "Both outputs are strong, evidence-anchored Step 1 evaluations that refuse to inflate the score, correctly stop before opening the reference, and flag missing files. The decisive difference is evidence_specificity and pedagogical_value: Output B actually located and cites `iac/app.py`, pointing to concrete lines/attributes (CfnCacheCluster, num_cache_nodes=1, nat_gateways=1, requests_per_target=400, CloudFront ALLOW_ALL default policy, ALB listener on :80) \u2014 giving the student exact code-level defects to open and fix. Output A, by contrast, could not find any CDK/template file at all and so its Security/Reliability/IaC scores rest only on the design doc's prose claims, making its criticisms less falsifiable and less teachable (e.g., 'region is never named' vs B's specific 'EU-residency constraint isn't pinned in code' plus template-vs-design contradictions enumerated with named services). Both catch the same core planted issues (single-AZ Aurora, AT-2 failure/cache root cause, AT-5 unexecuted, ingest queue design/code mismatch), but B's version of each is more concrete and actionable, satisfying strictness_honesty and evidence_specificity more fully while matching A on stage discipline."
+    },
+    {
+      "cell": "05-evaluate\u00b7step2-neutral",
+      "order1": "B",
+      "order2swapped": "A",
+      "verdict": "candidate",
+      "reason": "Both comparisons are rich, evidence-anchored, and even-handed (crediting the student on rejected-alternatives quality and the Redis/queue contradiction), but Output A breaks stage discipline by opening a 'Step 3 \u2014 code comprehension check' section and previewing its exact three planned questions before Step 3 has actually begun \u2014 that's leaking the next stage's content mid Step 2. Output B stays entirely within Step 2's job, closing with a synthesis instead of pre-announcing Step 3. On substance the two are close, but B goes slightly deeper technically (e.g., explicitly separating RPO vs RTO to explain why the 5-minute-backup claim doesn't satisfy SC-3's 30-minute recovery bound, and quantifying photo-storage lifecycle savings and CloudFront egress), giving marginally sharper pedagogical payoff. The stage-discipline violation in A is a concrete process fault the rubric explicitly penalizes, so B wins overall."
+    }
+  ],
+  "pairwise": {
+    "winsA": 0,
+    "winsB": 4,
+    "ties": 2
+  },
+  "targetOk": true,
+  "regressions": [],
+  "promote": true
+}

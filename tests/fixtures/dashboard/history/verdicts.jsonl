@@ -1,0 +1,2 @@
+{"key": "05-evaluate|aaa|bbb|ccc|claude-sonnet-4-6", "at": "2026-08-15T06:38:55+00:00", "suite": "05-evaluate", "promote": true, "reason": null, "newEvidence": null, "record": "compare-05-evaluate-20260815-063855.json"}
+{"key": "05-evaluate|aaa|ddd|ccc|claude-sonnet-4-6", "at": "2026-08-15T07:10:00+00:00", "suite": "05-evaluate", "promote": false, "reason": "harness fix abc123", "newEvidence": null, "record": "compare-05-evaluate-20260815-063855.json"}

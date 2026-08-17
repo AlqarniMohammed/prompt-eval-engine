@@ -1,0 +1,31 @@
+# LIVE config — generation on promptfoo's NATIVE anthropic:claude-agent-sdk
+# provider (per-test overrides from the generator point it at a fresh
+# fixture workspace with the generation agent's model/caps); llm-rubric
+# grading on the metered judge provider. API-key transport only.
+# NEVER invoked directly: runner.py owns the lock, ledger, budget gate, and
+# watchdog. Run only after the offline gate (validate) is green.
+description: Live eval — native agent-SDK generation + metered judge grading
+
+prompts:
+  - id: file://src/loaders/pf_prompts.py:current_prompt
+    label: current
+
+# Native agent-sdk provider. Every generated test overrides this config via
+# its `options` (promptfoo never loads a test-level `provider:` dict from a
+# Python generator — see pf_tests.py). The sentinel working_dir makes a test
+# that lacks its options override fail loudly and free (stat error before
+# any API call), never silently generate with defaults.
+providers:
+  - id: anthropic:claude-agent-sdk
+    label: agent-sdk
+    config:
+      working_dir: outputs/__missing-per-test-options__
+
+defaultTest:
+  options:
+    provider: file://src/providers/judge_provider.py
+
+tests: file://src/loaders/pf_tests.py:generate_tests
+
+extensions:
+  - file://src/hooks.py:extension_hook

@@ -1,0 +1,21 @@
+# OFFLINE config — zero model calls, zero network.
+# The mock provider replays golden bundles (GOLDEN_SET=pass|fail,
+# GOLDEN_VARIANT=N) so the assertion suite is proven before any credit is
+# spent. Rubric asserts run against mock_judge (MOCK_JUDGE=pass|fail).
+# Run with EVAL_OFFLINE=1 so the test generator skips workspace/provider
+# expansion.
+description: Offline assertion validation — golden-bundle replay, no model calls
+
+prompts:
+  - id: file://src/loaders/pf_prompts.py:current_prompt
+    label: current
+
+providers:
+  - id: file://src/providers/mock_golden.py
+    label: golden-replay
+
+defaultTest:
+  options:
+    provider: file://src/providers/mock_judge.py
+
+tests: file://src/loaders/pf_tests.py:generate_tests

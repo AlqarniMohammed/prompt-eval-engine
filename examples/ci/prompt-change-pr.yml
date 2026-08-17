@@ -1,0 +1,89 @@
+# ══════════════════════════════════════════════════════════════════════════
+# ⚠⚠  THE SECOND JOB IN THIS WORKFLOW SPENDS REAL MONEY  ⚠⚠
+#
+# This is an EXAMPLE, shipped under examples/ci/ ON PURPOSE — placed in
+# .github/workflows/ of this repo it would execute and spend here. Copy it
+# into YOUR project's .github/workflows/ and adjust the paths.
+#
+# Shape:
+#   free-validate  — runs on every prompt-touching PR, $0, no key in scope.
+#   paid-compare   — runs ONLY when a maintainer applies the `run-paid-eval`
+#                    label: an explicit, per-PR, human opt-in to spend. The
+#                    ceiling is explicit (--max-cost) and the estimate is
+#                    printed (--dry-run) before the paid call.
+# ══════════════════════════════════════════════════════════════════════════
+name: prompt-change
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled]
+    # Only prompt-affecting changes are worth a pipeline run at all.
+    paths:
+      - "prompts/**"
+      - "datasets/**"
+      - "judges/**"
+      - "fixtures/**"
+      - "config/eval_config.yaml"
+
+jobs:
+  free-validate:
+    runs-on: ubuntu-latest
+    env:
+      # No key, no spend — structurally, not by convention.
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - run: uv run prompt-eval validate
+
+  paid-compare:
+    # ⚠ THIS JOB SPENDS MONEY. It runs only when a human applies the
+    # run-paid-eval label to this PR — remove the label to stop future runs.
+    if: contains(github.event.pull_request.labels.*.name, 'run-paid-eval')
+    needs: free-validate
+    runs-on: ubuntu-latest
+    environment: paid-evals        # keep the key in a protected environment
+    # The key is deliberately NOT job-level env: npm ci / uv sync execute
+    # PR-controlled lockfiles and must never run with a credential in scope.
+    # Only the steps that actually spend receive it (the dry run is pure
+    # local arithmetic and gets no key at all).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      # Pipeline state (outputs/.state.json) is gitignored and does not travel
+      # with a checkout. Rebuild it from the tracked outputs/history/ records —
+      # without this, the compare below aborts at the state gate.
+      - run: uv run prompt-eval validate
+      - run: uv run prompt-eval graft --from-history
+      - name: banner
+        run: |
+          echo "════════════════════════════════════════════════════════"
+          echo "⚠  THIS SPENDS MONEY — opted in via the run-paid-eval    "
+          echo "   label. Ceiling: \$2.00 (explicit --max-cost below).   "
+          echo "════════════════════════════════════════════════════════"
+      # Size it first — the dry run prints the full per-role breakdown and
+      # fails the job early if the estimate exceeds the ceiling.
+      - run: uv run prompt-eval compare --suite YOUR-SUITE-ID --dry-run --max-cost 2.00
+      # The paid run. The engine still enforces its own gates (state machine,
+      # measured estimate, watchdog, breaker) — the label only grants intent.
+      - run: uv run prompt-eval compare --suite YOUR-SUITE-ID --max-cost 2.00
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - run: uv run prompt-eval verdict --target YOUR-TARGET-DIMENSION --max-cost 2.00
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Verdict exit codes: 0 = PROMOTE, 1 = REJECT, 2 = INSUFFICIENT_EVIDENCE.
+      # Promotion itself stays a human act on a maintainer's machine.

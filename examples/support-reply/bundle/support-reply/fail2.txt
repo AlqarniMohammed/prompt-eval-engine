@@ -1,0 +1,8 @@
+===== STDOUT =====
+As an AI language model, I cannot access your order system or look up order
+51992 directly. Our ticketing system routes delivery complaints to the
+logistics queue, and internal policy requires two escalations before a trace
+is filed. I recommend contacting the carrier yourself with your tracking
+number, as they are responsible for packages once they leave our warehouse.
+
+— Northwind Gear Support
